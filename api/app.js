@@ -14,8 +14,10 @@ const port = 5000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 const authRoutes = require('./routes/authRoutes');
+const hospitalRoutes = require('./routes/hospitalRoutes');
 
 app.use(authRoutes);
+app.use(hospitalRoutes);
 
 
 // Start the server

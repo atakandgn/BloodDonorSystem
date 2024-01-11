@@ -215,7 +215,7 @@ export default function Navbar() {
         <div className="container mx-auto flex justify-between items-center w-full h-[100px]">
             <Link to="/">
                 <img className="object-contain lg:w-[300px] lg:h-[75px] w-[150px] h-[75px]"
-                     src="https://upload.wikimedia.org/wikipedia/en/thumb/e/e4/Hotels.com_logo.svg/2560px-Hotels.com_logo.svg.png"
+                     src="https://miro.medium.com/v2/da:true/resize:fit:700/1*62NsO-zG2nNWW1xuuZEUzA.gif"
                      alt=""/>
             </Link>
             <div className="flex items-center gap-4">
@@ -224,7 +224,7 @@ export default function Navbar() {
                         <Popover placement="bottom">
                             <PopoverHandler>
                                 <Button className="flex items-center gap-4 py-2.5">
-                                    <img className="w-12 h-12 rounded-full border border-white" src={decodedToken?.picture}
+                                    <img className="w-12 h-12 rounded-full border border-white" src={decodedToken?.picture ? decodedToken?.picture : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
                                             alt=""/>
                                     <div>
                                         <Typography variant="h6">Welcome,</Typography>

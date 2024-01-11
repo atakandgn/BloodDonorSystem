@@ -1,6 +1,6 @@
 // Authentication Middleware
 const jwt = require('jsonwebtoken');
-require('dotenv').config({ path: './config/.env' });
+require('dotenv').config({ path: '../config/.env' });
 /**
  * @swagger
  * components:
@@ -30,4 +30,4 @@ const authenticateToken = (req, res, next) => {
     }
 }
 
-export default authenticateToken;
+module.exports = authenticateToken;
