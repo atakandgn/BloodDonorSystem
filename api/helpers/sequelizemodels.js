@@ -60,13 +60,13 @@ const branch = {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    branch_city: {
-        type: DataTypes.STRING,
+    branch_district: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-    },
-    branch_town: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        references: {
+            model: 'district',
+            key: 'district_id',
+        },
     },
 }
 

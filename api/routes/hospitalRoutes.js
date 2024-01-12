@@ -4,6 +4,8 @@ const router = express.Router();
 const {initializeSequelize} = require("../helpers/sequelize");
 const Joi = require("joi");
 const Redis = require('ioredis');
+const redis = new Redis();
+
 const {
     donors,
     blood_types,
@@ -361,36 +363,25 @@ router.post("/addBloodToBank", authenticateToken, async (req, res) => {
 
 
 router.post("/requestBlood", async (req, res) => {
-    // Access the Redis client from the request object
-    const redisClient = req.redisClient;
     try {
         const {error, value} = Joi.object({
             branch_id: Joi.number().required(),
             blood_type: Joi.number().min(1).max(8).required(),
             units: Joi.number().required(),
-            city: Joi.number().required(),
-            district: Joi.number().required(),
+            // city: Joi.number().required(),
+            // district: Joi.number().required(),
             expire_day: Joi.number().optional().default(7),
             reason: Joi.string().optional(),
         }).validate(req.body);
+
         if (error) {
             return res.status(400).send(`Validation Error: ${error.details[0].message}`);
         }
-        const {branch_id, blood_type, units, expire_day, reason} = value;
+
+        const {branch_id, blood_type, units, expire_day, reason, city, district} = value;
         const sequelize = await initializeSequelize();
 
-        const donorsModel = sequelize.define("donors", donors, {
-            timestamps: false,
-            freezeTableName: true,
-        });
-        const cityModel = sequelize.define("city", city, {
-            timestamps: false,
-            freezeTableName: true,
-        });
-        const districtModel = sequelize.define("district", district, {
-            timestamps: false,
-            freezeTableName: true,
-        });
+        // Models
         const bloodRequestModel = sequelize.define("blood_requests", blood_requests, {
             timestamps: false,
             freezeTableName: true,
@@ -403,67 +394,97 @@ router.post("/requestBlood", async (req, res) => {
             timestamps: false,
             freezeTableName: true,
         });
-        const reqQueModel = sequelize.define("req_queue", req_queue, {
-            timestamps: false,
-            freezeTableName: true,
-        });
         const bloodBankModel = sequelize.define("blood_bank", blood_bank, {
             timestamps: false,
             freezeTableName: true,
         });
-        bloodRequestModel.belongsTo(bloodTypesModel, {
-            foreignKey: "blood_type",
-            targetKey: "type_id",
+        const donorsModel = sequelize.define("donors", donors, {
+            timestamps: false,
+            freezeTableName: true,
         });
+
+
+        // Associations
+
         bloodRequestModel.belongsTo(branchModel, {
             foreignKey: "branch_id",
             targetKey: "branch_id",
         });
+        bloodBankModel.belongsTo(donorsModel, {
+            foreignKey: "donor_id",
+            targetKey: "donor_id"
+        });
+        bloodBankModel.belongsTo(branchModel, {
+            foreignKey: "branch_id",
+            targetKey: "branch_id",
+        });
 
+
+        const near50km = [551]
+
+        // Validate blood type
         if (blood_type < 1 || blood_type > 8) {
             return res.status(400).send(`Validation Error: Blood type must be between 1 and 8.`);
         }
-        const bloodBank = await bloodBankModel.findOne({
+
+
+        // Check blood availability in blood bank
+        const bloodAvailability = await bloodBankModel.findAll({
+
+            include: [
+                {
+                    model: branchModel,
+                    as: "branch",
+                    //district kontrolü yapılacak
+                },
+                {
+                    model: donorsModel,
+                    as: "donor",
+                    //donor blood type kontrolü yapılack
+                },
+            ],
             where: {
-                branch_id,
-                blood_type,
+                units: {
+                    [Op.gte]: units,
+                },
             },
         });
-        if (bloodBank && bloodBank.units >= units) {
-            // Blood is available in the blood bank, process the request
-            await processBloodRequest(branch_id, blood_type, units, expire_day, reason);
-            res.status(200).json({ message: 'Blood request fulfilled from blood bank.' });
-        } else {
-            // Blood not available in blood bank, check in the city
-            const cityBloodBank = await bloodBankModel.findOne({
-                where: {
-                    city_id: city,
-                    blood_type,
-                },
-            });
-
-            if (cityBloodBank && cityBloodBank.units >= units) {
-                // Blood is available in the city's blood bank, process the request
-                await processBloodRequest(branch_id, blood_type, units, expire_day, reason);
-                res.status(200).json({ message: 'Blood request fulfilled from city blood bank.' });
-            } else {
-                // Blood not available in city blood bank, add to the Redis queue
-                await addBloodRequestToQueue(branch_id, blood_type, units, expire_day, reason);
-                res.status(200).json({ message: 'Blood request added to the queue.' });
+        let nearBlood = bloodAvailability.find(item => {
+            if (near50km.includes(item.dataValues.branch.branch_district) && item.dataValues.donor.dataValues.donor_blood_type == blood_type) {
+                return item
             }
+        });
+        if (nearBlood) {
+            await bloodBankModel.decrement('units', {
+                by: units,
+                where: {donate_id: nearBlood.dataValues.donate_id}
+            });
+            res.status(200).send({message: "Blood request completed successfully."});
+        } else {
+            if (!bloodBankModel.donate_id){
+                // Blood not available, add request to Redis queue
+                const queueData = {
+                    // donate_id eklenecek
+                    branch_id: branch_id,
+                    blood_type: blood_type,
+                    units: units,
+                    expire_day: expire_day,
+                    reason: reason,
+                };
+                await redis.rpush('bloodRequestQueue', JSON.stringify(queueData));
+                return  "Blood request added to Redis queue."
+            }
+
+            res.send({message: "Blood request already in queue."});
+
         }
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        console.log(error);
+        res.status(500).send(error.message);
     }
 });
-// Functions for processing and queuing blood requests
-// processBloodRequest and addBloodRequestToQueue functions
-
-// Close the Redis connection when the application is closing
-process.on('beforeExit', () => {
-    redisClient.quit();
-});
+// redis-cli start the cli server for redis
+// lrange bloodRequestQueue 0 -1 to see the queue data  (0 is the start index, -1 is the end index)
 
 
 module.exports = router;
