@@ -1,5 +1,6 @@
 // app.js
 const express = require('express');
+const Redis = require('ioredis');
 const sql = require('mysql');
 const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
@@ -7,11 +8,22 @@ const cors = require('cors');
 const sass = require('node-sass');
 const path = require('path');
 require('dotenv').config({path: './config/.env'});
+
 const app = express();
 app.use(cors());
 app.use(express.json())
 const port = 5000;
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Redis setup
+const redisClient = new Redis();
+
+// Middleware to make Redis client available globally
+app.use((req, res, next) => {
+    req.redisClient = redisClient;
+    next();
+});
 
 const authRoutes = require('./routes/authRoutes');
 const hospitalRoutes = require('./routes/hospitalRoutes');

@@ -19,13 +19,13 @@ const donors = {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    donor_city: {
-        type: DataTypes.STRING,
+    donor_district: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-    },
-    donor_town: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        references: {
+            model: 'district',
+            key: 'district_id',
+        },
     },
     donor_blood_type: {
         type: DataTypes.INTEGER,
@@ -114,10 +114,107 @@ const blood_types = {
     },
 }
 
+const city = {
+    city_id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    city_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+}
+
+const district = {
+    district_id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    district_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    city_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'city',
+            key: 'city_id',
+        },
+    },
+}
+
+const blood_requests = {
+    request_id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    branch_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'branches',
+            key: 'branch_id',
+        },
+    },
+    blood_type: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'blood_types',
+            key: 'type_id',
+        },
+    },
+    units: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    expire_day: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    reason: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    request_date: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    request_status: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+    },
+};
+
+const req_queue = {
+    queue_id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    req_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'blood_requests',
+            key: 'request_id',
+        },
+    },
+
+}
+
 
 module.exports = {
     donors,
     branch,
     blood_bank,
     blood_types,
+    city,
+    district,
+    blood_requests,
+    req_queue
 };
