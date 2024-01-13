@@ -5,6 +5,7 @@ const {initializeSequelize} = require("../helpers/sequelize");
 const Joi = require("joi");
 const Redis = require('ioredis');
 const redis = new Redis();
+const geolib = require('geolib');
 
 const {
     donors,
@@ -25,7 +26,7 @@ router.post("/createDonor", authenticateToken, async (req, res) => {
             donor_name: Joi.string().required(),
             donor_surname: Joi.string().required(),
             donor_phone: Joi.string().required(),
-            donor_address: Joi.number().min(1).max(972).required(),
+            donor_address: Joi.number().min(1).max(957).required(),
             donor_blood_type: Joi.number().required(),
             donor_img: Joi.string().required(),
         }).validate(req.body);
@@ -159,7 +160,7 @@ router.put("/updateDonor/:donor_id", authenticateToken, async (req, res) => {
             donor_name: Joi.string(),
             donor_surname: Joi.string(),
             donor_phone: Joi.string(),
-            donor_address: Joi.number().min(1).max(972).required(),
+            donor_address: Joi.number().min(1).max(957).required(),
             donor_blood_type: Joi.number().min(1).max(8),
             donor_img: Joi.string(),
         }).validate(req.body);
@@ -368,8 +369,8 @@ router.post("/requestBlood", async (req, res) => {
             branch_id: Joi.number().required(),
             blood_type: Joi.number().min(1).max(8).required(),
             units: Joi.number().required(),
-            // city: Joi.number().required(),
-            // district: Joi.number().required(),
+            city_id: Joi.number().min(1).max(81).required(),
+            district_id: Joi.number().min(1).max(957).required(),
             expire_day: Joi.number().optional().default(7),
             reason: Joi.string().optional(),
         }).validate(req.body);
@@ -378,15 +379,11 @@ router.post("/requestBlood", async (req, res) => {
             return res.status(400).send(`Validation Error: ${error.details[0].message}`);
         }
 
-        const {branch_id, blood_type, units, expire_day, reason, city, district} = value;
+        const {branch_id, blood_type, units, expire_day, reason, city_id, district_id} = value;
         const sequelize = await initializeSequelize();
 
         // Models
         const bloodRequestModel = sequelize.define("blood_requests", blood_requests, {
-            timestamps: false,
-            freezeTableName: true,
-        });
-        const bloodTypesModel = sequelize.define("blood_types", blood_types, {
             timestamps: false,
             freezeTableName: true,
         });
@@ -402,8 +399,14 @@ router.post("/requestBlood", async (req, res) => {
             timestamps: false,
             freezeTableName: true,
         });
-
-
+        const districtModel = sequelize.define("district", district, {
+            timestamps: false,
+            freezeTableName: true,
+        });
+        const cityModel = sequelize.define("city", city, {
+            timestamps: false,
+            freezeTableName: true,
+        });
         // Associations
 
         bloodRequestModel.belongsTo(branchModel, {
@@ -419,28 +422,74 @@ router.post("/requestBlood", async (req, res) => {
             targetKey: "branch_id",
         });
 
+        districtModel.belongsTo(cityModel, {
+            foreignKey: "city_id",
+            targetKey: "city_id",
+        });
 
-        const near50km = [551]
-
-        // Validate blood type
+        const requestedDistrict = await districtModel.findOne({
+            where: {
+                district_id: district_id,
+            },
+            attributes: ["district_name", "latitude", "longitude"],
+            include: {
+                model: cityModel,
+                where: {
+                    city_id: city_id
+                }
+            }
+        });
+        const requestedDistrictLatitude = requestedDistrict.dataValues.latitude;
+        const requestedDistrictLongitude = requestedDistrict.dataValues.longitude;
         if (blood_type < 1 || blood_type > 8) {
             return res.status(400).send(`Validation Error: Blood type must be between 1 and 8.`);
         }
+        // Get all districts and filter by distance
+        const allDistricts = await districtModel.findAll({
+            attributes: ["district_id", "district_name", "latitude", "longitude"],
+            include: {
+                model: cityModel,
+                where: {
+                    city_id: city_id
+                }
+            }
+        });
 
+        const nearDistricts = allDistricts.filter((district) => {
+            const districtLatitude = district.dataValues.latitude;
+            const districtLongitude = district.dataValues.longitude;
 
-        // Check blood availability in blood bank
-        const bloodAvailability = await bloodBankModel.findAll({
+            const distance = geolib.getDistance(
+                {latitude: requestedDistrictLatitude, longitude: requestedDistrictLongitude},
+                {latitude: districtLatitude, longitude: districtLongitude}
+            );
 
+            // Check if the distance is less than or equal to 50km
+            return distance <= 50000; // 50km in meters
+        });
+
+        const nearDistrictIds = nearDistricts.map((district) => district.dataValues.district_id);
+
+        // Now you have the district IDs that are within 50km of the requested coordinates
+        console.log('Districts within 50km:', nearDistrictIds);
+
+        const branchIn50km = await bloodBankModel.findAll({
             include: [
                 {
                     model: branchModel,
                     as: "branch",
-                    //district kontrolü yapılacak
+                    where: {
+                        branch_district: {
+                            [Op.in]: nearDistrictIds
+                        }
+                    }
                 },
                 {
                     model: donorsModel,
                     as: "donor",
-                    //donor blood type kontrolü yapılack
+                    where: {
+                        donor_blood_type: blood_type
+                    }
                 },
             ],
             where: {
@@ -449,8 +498,9 @@ router.post("/requestBlood", async (req, res) => {
                 },
             },
         });
-        let nearBlood = bloodAvailability.find(item => {
-            if (near50km.includes(item.dataValues.branch.branch_district) && item.dataValues.donor.dataValues.donor_blood_type == blood_type) {
+
+        let nearBlood = branchIn50km.find(item => {
+            if (nearDistrictIds && item.dataValues.donor.dataValues.donor_blood_type == blood_type) {
                 return item
             }
         });
@@ -459,26 +509,51 @@ router.post("/requestBlood", async (req, res) => {
                 by: units,
                 where: {donate_id: nearBlood.dataValues.donate_id}
             });
-            res.status(200).send({message: "Blood request completed successfully."});
+            return res.status(200).send({message: "Blood request completed successfully."});
         } else {
-            if (!bloodBankModel.donate_id){
-                // Blood not available, add request to Redis queue
-                const queueData = {
-                    // donate_id eklenecek
-                    branch_id: branch_id,
-                    blood_type: blood_type,
-                    units: units,
-                    expire_day: expire_day,
-                    reason: reason,
-                };
-                await redis.rpush('bloodRequestQueue', JSON.stringify(queueData));
-                return  "Blood request added to Redis queue."
+            const queueIdKey = "bloodRequestQueueId";  // Key to store the incrementing counter
+            const requestId = await redis.incr(queueIdKey);  // Increment the counter and get the new value
+
+// Check if a similar request is already in the queue
+            const isRequestInQueue = await redis.lrange("bloodRequestQueue", 0, -1);
+            const existingRequest = isRequestInQueue.find((request) => {
+                const parsedRequest = JSON.parse(request);
+
+                // Check if the parameters match
+                return (
+                    parsedRequest.blood_type === blood_type &&
+                    parsedRequest.units === units &&
+                    parsedRequest.expire_day === expire_day &&
+                    parsedRequest.reason === reason &&
+                    JSON.stringify(parsedRequest.near50km) === JSON.stringify(nearDistrictIds)
+                );
+            });
+
+            if (existingRequest) {
+                return res.status(400).send({ message: "Blood request with the same parameters is already in the queue. Searching blood every day. Please be patient. " +
+                        "STAY SAFE 😷:)" });
             }
 
-            res.send({message: "Blood request already in queue."});
+// Add the request to Redis queue
+            const queueData = {
+                reids_queue_id: requestId,
+                branch_id: branch_id,
+                blood_type: blood_type,
+                units: units,
+                expire_day: expire_day,
+                reason: reason,
+                near50km: nearDistrictIds,
+            };
+
+            await redis.rpush("bloodRequestQueue", JSON.stringify(queueData));
+            return res.status(200).send({
+                message: "Blood request added to Redis queue. It will automatically be processed when blood is available."
+            });
 
         }
-    } catch (error) {
+
+    } catch
+        (error) {
         console.log(error);
         res.status(500).send(error.message);
     }
