@@ -5,7 +5,7 @@ const {initializeSequelize} = require('../helpers/sequelize');
 const Joi = require('joi');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { branch} = require("../helpers/sequelizemodels");
+const {branch, city, district} = require("../helpers/sequelizemodels");
 
 
 /**
@@ -75,6 +75,13 @@ router.post('/login', async (req, res) => {
             return res.status(401).send('Invalid username or password');
         }
 
+        // Check if the password is correct by comparing the hashed password login correct setup token
+        const isPasswordCorrect = await bcrypt.compare(branch_password, findBranch.branch_password);
+
+        if (!isPasswordCorrect) {
+            return res.status(401).send('Invalid username or password');
+        }
+
         // Generate JWT token
         const tokenPayload = {
             branch_id: findBranch.branch_id,
@@ -85,6 +92,7 @@ router.post('/login', async (req, res) => {
 
         // Send the token in the response
         return res.status(200).send({token});
+
     } catch (error) {
         console.error('Login Error:', error);
         return res.status(500).send(error);
@@ -183,13 +191,14 @@ router.post('/register', async (req, res) => {
             branch_name: Joi.string().required(),
             branch_username: Joi.string().required(),
             branch_password: Joi.string().required(),
+            branch_district: Joi.number().min(1).max(957).required(),
         }).validate(req.body);
 
         if (error) {
             return res.status(400).send(`Validation Error: ${error.details[0].message}`);
         }
 
-        const {branch_username, branch_name, branch_password} = value;
+        const {branch_username, branch_name, branch_password, branch_district} = value;
 
         // Hash the password using bcrypt
         const hashedPassword = await bcrypt.hash(branch_password, 10);
@@ -206,6 +215,7 @@ router.post('/register', async (req, res) => {
             branch_username,
             branch_name,
             branch_password: hashedPassword,
+            branch_district,
         });
 
         if (!newBranch) {
@@ -220,4 +230,42 @@ router.post('/register', async (req, res) => {
 });
 
 
+router.get('/getCountry', async (req, res) => {
+    try {
+        const sequelize = await initializeSequelize();
+        const cityModel = sequelize.define('city', city, {
+            timestamps: false,
+            freezeTableName: true,
+        });
+        const districtModel = sequelize.define('district', district, {
+            timestamps: false,
+            freezeTableName: true,
+        });
+
+        districtModel.belongsTo(cityModel, {foreignKey: 'city_id'});
+        cityModel.hasMany(districtModel, {foreignKey: 'city_id'});
+
+
+        const findCity = await cityModel.findAll({
+            include: [{
+                model: districtModel,
+                as: 'districts',
+                attributes: ['district_id', 'district_name',"latitude","longitude"],
+            }],
+            attributes: ['city_id', 'city_name',"latitude","longitude"],
+        });
+
+
+        if (!findCity) {
+            return res.status(400).send('Validation Error');
+        }
+
+        // Send the token in the response
+        return res.status(200).send(findCity);
+
+    } catch (error) {
+        console.error('Error:', error);
+        return res.status(500).send('Internal server error during registration.');
+    }
+});
 module.exports = router;

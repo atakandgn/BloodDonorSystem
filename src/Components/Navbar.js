@@ -60,8 +60,8 @@ export default function Navbar() {
     const handleLogin = async () => {
         try {
             const response = await axios.post('http://localhost:5000/login', {
-                username: loginData.username,
-                password: loginData.password,
+                branch_username: loginData.branch_username,
+                branch_password: loginData.branch_password,
             });
             if (response.status === 200) {
                 setIsLoginModalOpen(false);
@@ -82,8 +82,8 @@ export default function Navbar() {
             // Clear the username and password fields
             setLoginData({
                 ...loginData,
-                username: '',
-                password: '',
+                branch_username: '',
+                branch_password: '',
             });
         }
     };
@@ -125,59 +125,56 @@ export default function Navbar() {
         return () => clearInterval(timeoutInterval);
     }, [lastActivity]);
 
-
-    // CITY SELECT STATES
-    const [selectedCountry, setSelectedCountry] = useState('');
+    useEffect(() => {
+        fetchData();
+    }, []);
     const [selectedCity, setSelectedCity] = useState('');
     const [selectedDistrict, setSelectedDistrict] = useState('');
-    const handleCountryChange = (value) => {
-        setSelectedCountry(value);
-        setSelectedCity(''); // Reset selectedCity when country changes
-        setSelectedDistrict(''); // Reset selectedDistrict when country changes
+    const [citiesData, setCitiesData] = useState([]);
+    const fetchData = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/getCountry');
+            setCitiesData(response.data);
+            console.log(citiesData)
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
     };
 
     const handleCityChange = (value) => {
         setSelectedCity(value);
-        setSelectedDistrict(''); // Reset selectedDistrict when city changes
+        // Additional logic if needed
     };
 
     const handleDistrictChange = (value) => {
         setSelectedDistrict(value);
+        // Additional logic if needed
     };
 
-
     const [registerData, setRegisterData] = useState({
-        name: '',
-        surname: '',
-        email: '',
-        username: '',
-        phone: '',
-        gender: '',
-        password: '',
+        branch_name: '',
+        branch_username: '',
+        branch_password: '',
         passwordConfirm: '',
-        country: '',
-        city: '',
-        district: '',
-        coupon_code: '',
+        branch_city: '',
+        branch_district: '',
     });
 
     const registerUser = async () => {
         try {
+            // Map selectedDistrict to district_id
+            const selectedDistrictData = selectedCity
+                ? citiesData
+                    .find((city) => city.city_name === selectedCity)
+                    ?.districts.find((district) => district.district_name === selectedDistrict)
+                : null;
             const response = await axios.post(
                 'http://localhost:5000/register',
                 {
-                    name: registerData.name,
-                    surname: registerData.surname,
-                    username: registerData.username,
-                    email: registerData.email,
-                    phone: registerData.phone,
-                    gender: registerData.gender,
-                    password: registerData.password,
-                    passwordConfirm: registerData.passwordConfirm,
-                    country: selectedCountry,
-                    city: selectedCity,
-                    district: selectedDistrict,
-                    coupon_code: registerData.coupon_code ? registerData.coupon_code : "DEFAULT",
+                    branch_name: registerData.branch_name,
+                    branch_username: registerData.branch_username,
+                    branch_password: registerData.branch_password,
+                    branch_district: selectedDistrictData ? selectedDistrictData.district_id : null,
                 },
                 {
                     headers: {
@@ -196,7 +193,7 @@ export default function Navbar() {
                 console.error('Unexpected response:', response);
             }
         } catch (error) {
-            toast.error(error ? error.response.data : 'Registration failed!');
+            toast.error('Registration failed! Please check your information.');
             console.error('Registration failed:', error);
 
             if (error.response) {
@@ -207,6 +204,17 @@ export default function Navbar() {
             } else {
                 console.error('Error setting up the request:', error.message);
             }
+        }
+        finally {
+            setRegisterData({
+                ...registerData,
+                branch_name: '',
+                branch_username: '',
+                branch_password: '',
+                passwordConfirm: '',
+                branch_city: '',
+                branch_district: '',
+            });
         }
     };
 
@@ -224,12 +232,13 @@ export default function Navbar() {
                         <Popover placement="bottom">
                             <PopoverHandler>
                                 <Button className="flex items-center gap-4 py-2.5">
-                                    <img className="w-12 h-12 rounded-full border border-white" src={decodedToken?.picture ? decodedToken?.picture : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
-                                            alt=""/>
+                                    <img className="w-12 h-12 rounded-full border border-white"
+                                         src={decodedToken?.picture ? decodedToken?.picture : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
+                                         alt=""/>
                                     <div>
                                         <Typography variant="h6">Welcome,</Typography>
                                         <Typography variant="small" color="gray" className="font-normal">
-                                            <i>{storageToken?.name} {storageToken?.surname}</i>
+                                            <i>{storageToken?.branch_name}</i>
                                         </Typography>
                                     </div>
                                 </Button>
@@ -249,115 +258,51 @@ export default function Navbar() {
                         <Button variant="gradient" onClick={openRegisterModal}>Sign Up</Button>
                     </div>
                 )}
-
-                {/*<Drawler/>*/}
-
             </div>
             <Modal
-                long={"sm:h-max sm:overflow-hidden h-[42rem] overflow-scroll"}
                 size={"sm"}
                 header={<h1>Sign Up</h1>}
                 body={
                     <div className="flex flex-col gap-4">
                         <div className="flex sm:flex-row flex-col gap-4">
-                            <Input
-                                variant="standard"
-                                label="Name"
-                                placeholder="Name"
-                                onChange={(e) => setRegisterData({...registerData, name: e.target.value})}
-                            />
-                            <Input
-                                variant="standard"
-                                label="Surname"
-                                placeholder="Surname"
-                                onChange={(e) => setRegisterData({...registerData, surname: e.target.value})}
-                            />
+                            <Input variant="standard" label="Branch Name"
+                                   onChange={(e) => setRegisterData({
+                                       ...registerData, branch_name: e.target.value
+                                   })}/>
+                            <Input variant="standard" label="Username" onChange={(e) => setRegisterData({
+                                ...registerData, branch_username: e.target.value
+                            })}/>
                         </div>
-                        <div className="flex sm:flex-row flex-col gap-4">
-                            <Input
-                                variant="standard"
-                                label="E-Mail"
-                                placeholder="Standard"
-                                onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
-                            />
-                            <Input
-                                variant="standard"
-                                label="Username"
-                                placeholder="Username"
-                                onChange={(e) => setRegisterData({...registerData, username: e.target.value})}
-                            />
-                        </div>
-                        <div className="flex sm:flex-row flex-col gap-4">
-                            <Input
-                                variant="standard"
-                                label="Phone Number"
-                                placeholder="Phone Number"
-                                onChange={(e) => setRegisterData({...registerData, phone: e.target.value})}
-                            />
-                            <Select
-                                variant="standard"
-                                label="Gender"
-                                onChange={(value) => setRegisterData({...registerData, gender: value})}
-                            >
-                                <Option value="1">Male</Option>
-                                <Option value="2">Female</Option>
-                            </Select>
-                        </div>
-
                         <div className="flex sm:flex-row flex-col gap-4">
                             <SelectBox
-                                smallLabel={'Country'}
-                                value={selectedCountry}
-                                onChange={(value) => handleCountryChange(value)}
-                                label="Choose a country"
-                                options={countriesData.map((country) => country.name)}
-                            />
-
-                            <SelectBox
-                                smallLabel={'State'}
+                                smallLabel={'City'}
                                 value={selectedCity}
                                 onChange={(value) => handleCityChange(value)}
-                                label="Choose a state"
-                                options={
-                                    selectedCountry
-                                        ? countriesData.find((country) => country.name === selectedCountry)?.states.map((state) => state.name)
-                                        : []
-                                }
-                                disabled={!selectedCountry}
+                                label="Choose a city"
+                                options={citiesData.map((city) => city.city_name)}
                             />
-                        </div>
-                        <div className="flex sm:flex-row flex-col gap-4">
                             <SelectBox
                                 smallLabel={'District'}
                                 value={selectedDistrict}
                                 onChange={(value) => handleDistrictChange(value)}
-                                label="Choose a city"
+                                label="Choose a district"
                                 options={
                                     selectedCity
-                                        ? countriesData
-                                            .find((country) => country.name === selectedCountry)
-                                            ?.states.find((state) => state.name === selectedCity)
-                                            ?.cities.map((city) => city.name)
+                                        ? citiesData
+                                        .find((city) => city.city_name === selectedCity)
+                                        ?.districts.map((district) => district.district_name) || []
                                         : []
                                 }
-                                disabled={!selectedCity}
-                            />
-
-                            <Input
-                                variant="standard"
-                                label="Enter Coupon"
-                                value={registerData.coupon_code}
-                                onChange={(e) => setRegisterData({coupon_code: e.target.value})}
+                                disabled={!selectedCity}  // Corrected logic here
                             />
                         </div>
-
                         <div className="flex flex-col gap-2">
                             <div className="flex sm:flex-row flex-col gap-4">
                                 <Input
                                     variant="standard"
                                     type="password"
                                     label="Password"
-                                    onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                                    onChange={(e) => setRegisterData({...registerData, branch_password: e.target.value})}
                                 />
                                 <Input
                                     variant="standard"
@@ -423,7 +368,7 @@ export default function Navbar() {
                             variant="standard"
                             label="Username"
                             placeholder="Standard"
-                            onChange={(e) => setLoginData({...loginData, username: e.target.value})}
+                            onChange={(e) => setLoginData({...loginData, branch_username: e.target.value})}
                         />
                         <div>
                             <Input
@@ -431,7 +376,7 @@ export default function Navbar() {
                                 type="password"
                                 label="Password"
                                 placeholder="Standard"
-                                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                                onChange={(e) => setLoginData({...loginData, branch_password: e.target.value})}
                             />
                             <Typography
                                 variant="small"
