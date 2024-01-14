@@ -35,6 +35,10 @@ const donors = {
             key: 'type_id',
         }
     },
+    donor_email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
     donor_img: {
         type: DataTypes.STRING,
         allowNull: false,
