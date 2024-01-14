@@ -10,15 +10,16 @@ app.use(express.json());
 // Define the blood search function
 const searchForBlood = async () => {
     try {
-        // Make a request to the /requestBlood endpoint
+        // Make a request to the /requestBlood endpoint on your server
         const response = await axios.post('http://localhost:5000/requestBlood', {
-            // branch_id: 1,
-            // blood_type: 2,
-            // units: 3,
-            // city_id: 4,
-            // district_id: 5,
-            // expire_day: 7,
-            // reason: 'Nightly blood search',
+            // Include the necessary request parameters
+            branch_id: 1,
+            blood_type: 2,
+            units: 3,
+            city_id: 4,
+            district_id: 5,
+            expire_day: 7,
+            reason: 'Nightly blood search',
         });
 
         console.log('Nightly blood search response:', response.data);
@@ -30,7 +31,7 @@ const searchForBlood = async () => {
 // Schedule nightly blood search every day at 1:00
 cron.schedule('0 1 * * *', () => {
     console.log('Running nightly blood search...');
-    searchForBlood().then(r => console.log('Nightly blood search completed!'));
+    searchForBlood();
 });
 
 // Start the Express server

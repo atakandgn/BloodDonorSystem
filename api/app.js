@@ -1,6 +1,5 @@
 // app.js
 const express = require('express');
-const Redis = require('ioredis');
 const sql = require('mysql');
 const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
@@ -16,20 +15,6 @@ const port = 5000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Redis setup
-const redisClient = new Redis
-// ({
-//     host: process.env.REDIS_HOST || '127.0.0.1',
-//     port: process.env.REDIS_PORT || 6379,
-//     password: process.env.REDIS_PASSWORD || undefined,
-// });
-
-
-// Middleware to make Redis client available globally
-app.use((req, res, next) => {
-    req.redisClient = redisClient;
-    next();
-});
 
 const authRoutes = require('./routes/authRoutes');
 const hospitalRoutes = require('./routes/hospitalRoutes');
