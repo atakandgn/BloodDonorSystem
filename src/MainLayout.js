@@ -11,7 +11,7 @@ function MainLayout({children}) {
         <PopupProvider>
             <div className="relative">
                 <Navbar/>
-                <div className="container mx-auto min-h-[75vh] lg:px-0 px-2">{children}</div>
+                <div className="container mx-auto min-h-[50vh] lg:px-0 px-2">{children}</div>
                 <ScrollTop/>
                 <Footer className="fixed bottom"/>
                 <Toaster containerClassName="custom-toast-container"/>

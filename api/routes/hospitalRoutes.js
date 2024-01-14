@@ -26,6 +26,7 @@ router.post("/createDonor", authenticateToken, async (req, res) => {
             donor_name: Joi.string().required(),
             donor_surname: Joi.string().required(),
             donor_phone: Joi.string().required(),
+            donor_email: Joi.string().email().required(),
             donor_address: Joi.number().min(1).max(957).required(),
             donor_blood_type: Joi.number().required(),
             donor_img: Joi.string().required(),
@@ -35,7 +36,7 @@ router.post("/createDonor", authenticateToken, async (req, res) => {
             return res.status(400).send(`Validation Error: ${error.details[0].message}`);
         }
 
-        const {donor_name, donor_surname, donor_phone, donor_address, donor_blood_type, donor_img,} = value;
+        const {donor_name, donor_surname, donor_phone, donor_address, donor_blood_type, donor_img,donor_email} = value;
         const sequelize = await initializeSequelize();
         const donorsModel = sequelize.define("donors", donors, {
             timestamps: false,
@@ -89,6 +90,7 @@ router.post("/createDonor", authenticateToken, async (req, res) => {
             donor_name: donor_name,
             donor_surname: donor_surname,
             donor_phone: donor_phone,
+            donor_email: donor_email,
             donor_district: donor_address,
             donor_blood_type: donor_blood_type,
             donor_img: donor_img,
@@ -520,8 +522,7 @@ router.post("/requestBlood", async (req, res) => {
                     });
 
                 return res.status(200).send({message: "Blood request fully completed successfully."});
-            }
-            else {
+            } else {
                 const updatedRequest = {
                     branch_id: branch_id,
                     blood_type: blood_type,
@@ -538,7 +539,7 @@ router.post("/requestBlood", async (req, res) => {
                 // Decrease the units in blood bank
                 await bloodBankModel.decrement("units", {
                     by: decreasedUnit,
-                    where: { donate_id: nearBlood.dataValues.donate_id },
+                    where: {donate_id: nearBlood.dataValues.donate_id},
                 });
 
                 // Send email to the donor
@@ -548,7 +549,7 @@ router.post("/requestBlood", async (req, res) => {
                     text: 'Your blood request used. Thank you for your help.',
                 });
 
-                return res.status(200).send({ message: "Blood request partially completed successfully." });
+                return res.status(200).send({message: "Blood request partially completed successfully."});
             }
 
 
@@ -738,6 +739,24 @@ router.post("/processBloodRequests", async (req, res) => {
         return res
             .status(200)
             .send({message: "Blood request queues processed successfully."});
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send(error.message);
+    }
+});
+router.get("/getBloodTypes", async (req, res) => {
+    try {
+        const sequelize = await initializeSequelize();
+        const bloodTypesModel = sequelize.define("blood_types", blood_types, {
+            timestamps: false,
+            freezeTableName: true,
+        });
+
+        const bloodTypes = await bloodTypesModel.findAll({
+            attributes: ["type_id", "type_name"],
+        });
+
+        return res.status(200).send(bloodTypes);
     } catch (error) {
         console.log(error);
         return res.status(500).send(error.message);

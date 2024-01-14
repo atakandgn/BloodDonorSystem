@@ -2,15 +2,12 @@ import React, {useEffect, useState} from 'react';
 import {
     Button,
     Input,
-    Option,
     Popover,
     PopoverContent,
     PopoverHandler,
-    Select,
     Typography
 } from "@material-tailwind/react";
 import {Modal} from "./Modal";
-import countriesData from '../countries+states+cities.json';
 import {Link, useNavigate} from "react-router-dom";
 import axios from 'axios';
 import toast from "react-hot-toast";

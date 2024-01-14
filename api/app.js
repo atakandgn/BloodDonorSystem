@@ -7,7 +7,6 @@ const cors = require('cors');
 const sass = require('node-sass');
 const path = require('path');
 require('dotenv').config({path: './config/.env'});
-
 const app = express();
 app.use(cors());
 app.use(express.json())
