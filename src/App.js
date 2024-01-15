@@ -6,8 +6,10 @@ import NotFound from "./Views/NotFound";
 import CreateDonor from "./Views/CreateDonor";
 import AddBloodToBank from "./Views/AddBloodToBank";
 import RequestBlood from "./Views/RequestBlood";
+import {getDecodedToken} from "./Components/auth";
 
 function App() {
+    const decodedToken = getDecodedToken();
     return (
         <BrowserRouter>
             <Routes>

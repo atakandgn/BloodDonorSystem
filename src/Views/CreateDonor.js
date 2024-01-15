@@ -4,6 +4,7 @@ import { Typography, Input, Button } from "@material-tailwind/react";
 import { getDecodedToken } from "../Components/auth";
 import SelectBox from "../Components/SelectBox";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const CreateDonor = () => {
     const decodedToken = getDecodedToken();
@@ -25,11 +26,11 @@ const CreateDonor = () => {
     const [selectedDistrict, setSelectedDistrict] = useState('');
 
     useEffect(() => {
-        fetchData();
+        getCountry();
         getBloodTypes();
     }, []);
 
-    const fetchData = async () => {
+    const getCountry = async () => {
         try {
             const response = await axios.get('http://localhost:5000/getCountry');
             setCitiesData(response.data);
@@ -60,10 +61,6 @@ const CreateDonor = () => {
         }
     };
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        setDonorImage(file);
-    };
 
     const handleBloodTypeChange = (selectedBloodType) => {
         const selectedBloodTypeData = bloodTypes.find((type) => type.type_name === selectedBloodType);
@@ -72,21 +69,32 @@ const CreateDonor = () => {
             setDonorBloodType(selectedBloodTypeData.type_id);
         }
     };
-
-    const handleSubmit = async () => {
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        setDonorImage(file.name);
+    };
+    const handleInputChange = (e) => {
+        // Use regex to allow only numeric characters
+        const numericValue = e.target.value.replace(/[^0-9]/g, '');
+        setDonorPhone(numericValue);
+    };
+    const handleSubmit = async (e) => {
+        e.preventDefault(); // Prevent the default form submission
         try {
             const token = localStorage.getItem("token");
 
-            const requestData = {
-                donor_img: donorImage ? donorImage.name : "image",
-                donor_name: donorName,
-                donor_surname: donorSurname,
-                donor_email: donorEmail,
-                donor_phone: donorPhone,
-                donor_address: selectedDistrict, // Assuming selectedDistrict is the ID
-                donor_blood_type: donorBloodType,
-            };
-            console.log("Request data:", requestData);
+            // Create FormData object to handle file upload
+            const formData = new FormData();
+
+
+            // Append other form data fields
+            formData.append('donor_name', donorName);
+            formData.append('donor_surname', donorSurname);
+            formData.append('donor_email', donorEmail);
+            formData.append('donor_img', donorImage);
+            formData.append('donor_phone', donorPhone);
+            formData.append('donor_address', selectedDistrict);
+            formData.append('donor_blood_type', donorBloodType);
 
             const config = {
                 headers: {
@@ -95,17 +103,20 @@ const CreateDonor = () => {
                 },
             };
 
-            const response = await axios.post("http://localhost:5000/createDonor", requestData, config);
+            const response = await axios.post("http://localhost:5000/createDonor", formData, config);
 
             if (response.status === 200) {
                 console.log("Donor created successfully:", response.data);
+                toast.success("Donor created successfully!");
             } else {
                 console.error("Error creating donor:", response.data);
+                toast.error("Can't create donor! Please try again.");
             }
         } catch (error) {
             console.error("Error:", error);
         }
     };
+
 
     return (
         <MainLayout>
@@ -116,7 +127,7 @@ const CreateDonor = () => {
                 <Typography color="blue-gray" className="text-center font-normal text-lg">
                     Please fill out the form below to create a new donor.
                 </Typography>
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                <form className="mt-8 space-y-6" onSubmit={handleSubmit} >
                     <Typography color="blue-gray" className="text-center font-normal text-2xl">
                         Branch: {decodedToken.branch_name}
                     </Typography>
@@ -153,7 +164,9 @@ const CreateDonor = () => {
                             label="Donor Phone"
                             placeholder="Enter Donor Phone"
                             value={donorPhone}
-                            onChange={(e) => setDonorPhone(e.target.value)}
+                            onChange={handleInputChange}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                         />
                     </div>
 
@@ -196,11 +209,11 @@ const CreateDonor = () => {
                             label="Donor Image"
                             onChange={handleImageChange}
                         />
+                        <Button className="w-1/2 mx-auto" color="black" type="button" ripple="light" onClick={handleSubmit}>
+                            Submit
+                        </Button>
                     </div>
 
-                    <Button color="indigo" type="button" ripple="light" onClick={handleSubmit}>
-                        Submit
-                    </Button>
                 </form>
             </div>
         </MainLayout>

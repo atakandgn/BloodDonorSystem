@@ -8,33 +8,33 @@ import toast from "react-hot-toast";
 export default function Home() {
     const decodedToken = getDecodedToken();
 
-    const handleLinkClick = (path) => {
+    const handleAdmin = () => {
         if (!decodedToken) {
             toast.error("Authentication required. Please log in.");
         }
-    };
+    }
 
     return (
         <MainLayout>
             <div className="flex justify-center items-center w-full">
                 <Card className="w-full justify-center items-center p-10">
-                    <List className="bg-slate-300/10 rounded-lg shadow-2xl hover:scale-110 transition duration-200 hover:duration-200 ">
+                    <List className="bg-slate-300/10 rounded-lg shadow-2xl hover:scale-110 transition duration">
                         {decodedToken && (
                             <>
                                 <ListItem>
-                                    <Link className="!w-full !text-center"to="/create-donor" onClick={() => handleLinkClick("/create-donor")}>
+                                    <Link className="!w-full !text-center" to="/create-donor" onClick={handleAdmin}>
                                         Create Donor
                                     </Link>
                                 </ListItem>
-                                <ListItem >
-                                    <Link className="!w-full !text-center" to="/add-blood-to-bank" onClick={() => handleLinkClick("/add-blood-to-bank")}>
+                                <ListItem>
+                                    <Link className="!w-full !text-center" to="/add-blood-to-bank" onClick={handleAdmin}>
                                         Add Blood to Bank
                                     </Link>
                                 </ListItem>
                             </>
                         )}
-                        <ListItem >
-                            <Link className="!w-full !text-center" to="/request-blood" onClick={() => handleLinkClick("/request-blood")}>
+                        <ListItem>
+                            <Link className="!w-full !text-center" to="/request-blood">
                                 Request Blood
                             </Link>
                         </ListItem>
