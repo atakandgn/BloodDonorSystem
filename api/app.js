@@ -306,27 +306,6 @@ app.get('/', (req, res) => {
     res.send(htmlResponse);
 });
 
-// Swagger Documentation Setup
-const swaggerOptions = {
-    definition: {
-        openapi: '3.0.0',
-        info: {
-            title: 'Blood Donor System API',
-            version: '1.0.0',
-            description: 'API for the Blood Donor System',
-            contact: {
-                name: 'Atakan Doğan',
-                email: 'atakandogan.info@gmail.com',
-                url: 'https://github.com/atakandgn/hotels_booking'
-            },
-        },
-    },
-    apis: ['app.js'],
-};
-
-
-const swaggerSpec = swaggerJSDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 
