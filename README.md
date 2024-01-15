@@ -1,70 +1,134 @@
-# Getting Started with Create React App
+# Hospital Management System Routes
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+![donorSystemClient](https://github.com/atakandgn/BloodDonorSystem/assets/108396649/35b719c9-f0f9-456d-a7d4-e8fe381edc7a)
 
-## Available Scripts
+## 1. Create Donor (`/createDonor`)
 
-In the project directory, you can run:
+- **Method**: POST
+- **Auth**: Token required
+- **Desc**: Creates a new blood donor record with details such as name, contact, blood type, and location.
 
-### `npm start`
+## 2. Update Donor (`/updateDonor/:donor_id`)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Method**: PUT
+- **Auth**: Token required
+- **Desc**: Updates information for an existing blood donor identified by `donor_id`.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 3. Add Blood to Bank (`/addBloodToBank`)
 
-### `npm test`
+- **Method**: POST
+- **Auth**: Token required
+- **Desc**: Records a blood donation to the blood bank, associating it with a branch, donor, and donation date.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 4. Request Blood (`/requestBlood`)
 
-### `npm run build`
+- **Method**: POST
+- **Auth**: Not required
+- **Desc**: Initiates a blood request, considering factors like blood type, units needed, location, and expiration days.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 5. Process Blood Requests (`/processBloodRequests`)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- **Method**: POST
+- **Auth**: Not required
+- **Desc**: Processes blood requests, checking available blood in the bank and fulfilling requests.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 6. Get Blood Types (`/getBloodTypes`)
 
-### `npm run eject`
+- **Method**: GET
+- **Auth**: Not required
+- **Desc**: Retrieves a list of available blood types.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 7. Get All Donors (`/getAllDonors`)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- **Method**: GET
+- **Auth**: Not required
+- **Desc**: Retrieves a list of all blood donors, optionally filtered by name and surname.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 8. Login (`/login`)
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **Method**: POST
+- **Auth**: Not required
+- **Desc**: Validates branch credentials (username and password), generates a JWT token upon successful validation, and returns it in the response.
 
-## Learn More
+## 9. Register (`/register`)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **Method**: POST
+- **Auth**: Not required
+- **Desc**: Registers a new branch, validating input parameters such as branch name, username, password, and district.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 10. Get Country (`/getCountry`)
 
-### Code Splitting
+- **Method**: GET
+- **Auth**: Not required
+- **Desc**: Retrieves a list of countries, including their cities and districts.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 11. Get All Branches (`/getAllBranches`)
 
-### Analyzing the Bundle Size
+- **Method**: GET
+- **Auth**: Not required
+- **Desc**: Retrieves a list of all branches, optionally filtered by branch name. Includes details such as branch ID, name, district, and city.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-### Making a Progressive Web App
+![donorSystemDB](https://github.com/atakandgn/BloodDonorSystem/assets/108396649/7f47d35d-7381-4388-b5da-e06bf787a552)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+# CRON Job Explanation
 
-### Advanced Configuration
+## Overview
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+This Node.js application implements a CRON job using the `node-cron` library. The purpose of the CRON job is to automate the execution of a specific task at regular intervals. In this scenario, the task involves making an HTTP POST request to a specified endpoint, assumed to be handling blood donation requests in a hospital management system.
 
-### Deployment
+## Implementation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Code Overview
 
-### `npm run build` fails to minify
+The main components of the implementation are as follows:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. **Express Server Setup:**
+    - A basic Express server is set up on port 5001.
+
+    ```javascript
+    const express = require('express');
+    const app = express();
+    const port = 5001;
+    ```
+
+2. **CRON Job Configuration:**
+    - The `node-cron` library is utilized to schedule a job that runs every night at 01:00.
+
+    ```javascript
+    const cron = require('node-cron');
+    cron.schedule('0 1 * * *', async () => {
+        // ...
+    });
+    ```
+
+3. **HTTP POST Request:**
+    - Within the CRON job, an asynchronous HTTP POST request is made to the API `/processBloodRequests` endpoint.
+
+    ```javascript
+    const axios = require('axios');
+    try {
+        const response = await axios.post('http://localhost:5000/processBloodRequests');
+        console.log(response.data.message);
+    } catch (error) {
+        console.error(error.message);
+    }
+    ```
+
+    - The response message is logged if the request is successful; otherwise, any encountered error is logged.
+
+4. **Server Initialization:**
+    - The Express server is started, and the CRON job is set in motion.
+
+    ```javascript
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });
+    ```
+
+## Running the CRON Job
+
+To execute the CRON job, run the `app.js` file using Node.js:
+
+```bash
+node app.js
