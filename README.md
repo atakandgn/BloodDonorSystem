@@ -71,64 +71,59 @@
 
 ![donorSystemDB](https://github.com/atakandgn/BloodDonorSystem/assets/108396649/7f47d35d-7381-4388-b5da-e06bf787a552)
 
-# CRON Job Explanation
+# Daily Blood Bank Search - CRON Job
 
 ## Overview
 
-This Node.js application implements a CRON job using the `node-cron` library. The purpose of the CRON job is to automate the execution of a specific task at regular intervals. In this scenario, the task involves making an HTTP POST request to a specified endpoint, assumed to be handling blood donation requests in a hospital management system.
+This Node.js application implements a CRON job designed for daily blood bank searches. The job runs every night at 01:00, making an API request to check for specific blood types. If the requested blood type is available in the blood bank table (`blood_bank`), the corresponding units are decremented, and an email notification is sent to the blood donor.
+
+Additionally, the application interfaces with a Redis Queue. If the requested units exceed the available quantity in the blood bank, the application checks the Redis Queue. If there are enough units in the queue, it decrements the blood bank accordingly and sends an email notification to the donor.
 
 ## Implementation
 
 ### Code Overview
 
-The main components of the implementation are as follows:
-
-1. **Express Server Setup:**
-    - A basic Express server is set up on port 5001.
-
-    ```javascript
-    const express = require('express');
-    const app = express();
-    const port = 5001;
-    ```
-
-2. **CRON Job Configuration:**
-    - The `node-cron` library is utilized to schedule a job that runs every night at 01:00.
+1. **CRON Job Setup:**
+   - The CRON job is configured using the `node-cron` library to execute the blood bank search task every night at 01:00.
 
     ```javascript
     const cron = require('node-cron');
     cron.schedule('0 1 * * *', async () => {
-        // ...
+        // Blood bank search and processing logic
     });
     ```
 
-3. **HTTP POST Request:**
-    - Within the CRON job, an asynchronous HTTP POST request is made to the API `/processBloodRequests` endpoint.
+2. **Blood Bank Search Logic:**
+   - The application makes an API request to check for the availability of a specific blood type.
 
     ```javascript
     const axios = require('axios');
     try {
-        const response = await axios.post('http://localhost:5000/processBloodRequests');
-        console.log(response.data.message);
+        const response = await axios.post('http://api.example.com/bloodBankSearch');
+        // Process the response and decrement blood bank units
     } catch (error) {
         console.error(error.message);
     }
     ```
 
-    - The response message is logged if the request is successful; otherwise, any encountered error is logged.
+3. **Email Notification to Donor:**
+   - Upon successful processing, an email notification is sent to the blood donor.
 
-4. **Server Initialization:**
-    - The Express server is started, and the CRON job is set in motion.
+4. **Redis Queue Integration:**
+   - The application checks the Redis Queue for additional blood units if the requested quantity exceeds the blood bank's available units.
 
     ```javascript
-    app.listen(port, () => {
-        console.log(`Server is running on port ${port}`);
-    });
+    const { createClient } = require('ioredis');
+    const redisClient = createClient({ /* Redis configuration */ });
+    // Check and process units from the Redis Queue
     ```
+
+5. **Email Notification to Donor from Queue:**
+   - If sufficient units are available in the queue, the blood bank is decremented accordingly, and an email notification is sent to the donor.
 
 ## Running the CRON Job
 
-To execute the CRON job, run the `app.js` file using Node.js:
+Execute the application to initiate the CRON job:
 
 ```bash
-node app.js
+node bloodBankSearchCron.js
