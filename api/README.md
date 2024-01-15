@@ -1,5 +1,7 @@
 # Hospital Management System Routes
 
+![donorSystemClient](https://github.com/atakandgn/BloodDonorSystem/assets/108396649/35b719c9-f0f9-456d-a7d4-e8fe381edc7a)
+
 ## 1. Create Donor (`/createDonor`)
 
 - **Method**: POST
@@ -66,6 +68,8 @@
 - **Auth**: Not required
 - **Desc**: Retrieves a list of all branches, optionally filtered by branch name. Includes details such as branch ID, name, district, and city.
 
+
+![donorSystemDB](https://github.com/atakandgn/BloodDonorSystem/assets/108396649/7f47d35d-7381-4388-b5da-e06bf787a552)
 
 # CRON Job Explanation
 
