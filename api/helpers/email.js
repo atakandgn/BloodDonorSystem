@@ -1,6 +1,5 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config({ path: './config/.env' });
-
 class EmailSender {
     constructor() {
         // Create a Nodemailer transporter using SMTP

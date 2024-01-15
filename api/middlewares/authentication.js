@@ -1,18 +1,6 @@
 // Authentication Middleware
 const jwt = require('jsonwebtoken');
 require('dotenv').config({ path: '../config/.env' });
-/**
- * @swagger
- * components:
- *   securitySchemes:
- *     bearerAuth:
- *          type: http
- *          scheme: bearer
- *          bearerFormat: JWT
- *          in: header
- *          name: Authorization
- *          description: JWT token for authentication
- */
 const authenticateToken = (req, res, next) => {
     const token = req.header('Authorization');
 

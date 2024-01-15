@@ -20,12 +20,18 @@ const authenticateToken = require("../middlewares/authentication");
 const {Op} = require("sequelize");
 const EmailSender = require("../helpers/email");
 const emailSender = new EmailSender();
-router.post("/createDonor", authenticateToken, async (req, res) => {
+
+const cloudinary = require("../helpers/cloudinary");
+const upload = require("../middlewares/multer");
+
+router.post("/createDonor", authenticateToken, upload.single('donor_img'), async (req, res) => {
     try {
+        const sequelize = await initializeSequelize();
         const {error, value} = Joi.object({
             donor_name: Joi.string().required(),
             donor_surname: Joi.string().required(),
             donor_phone: Joi.string().required(),
+            donor_email: Joi.string().email().required(),
             donor_address: Joi.number().min(1).max(957).required(),
             donor_blood_type: Joi.number().required(),
             donor_img: Joi.string().required(),
@@ -35,8 +41,8 @@ router.post("/createDonor", authenticateToken, async (req, res) => {
             return res.status(400).send(`Validation Error: ${error.details[0].message}`);
         }
 
-        const {donor_name, donor_surname, donor_phone, donor_address, donor_blood_type, donor_img,} = value;
-        const sequelize = await initializeSequelize();
+        const {donor_name, donor_surname, donor_phone, donor_address, donor_blood_type, donor_img, donor_email} = value;
+
         const donorsModel = sequelize.define("donors", donors, {
             timestamps: false,
             freezeTableName: true,
@@ -83,16 +89,21 @@ router.post("/createDonor", authenticateToken, async (req, res) => {
         if (existingDonor) {
             return res.status(400).send("Can not add this donor is already exist.");
         }
+        // Upload image to Cloudinary
+        // const result = await cloudinary.uploader.upload(req.file?.path, {
+        //     folder: '',
+        // });
 
-        // Create a new donor
         const newDonor = await donorsModel.create({
             donor_name: donor_name,
             donor_surname: donor_surname,
             donor_phone: donor_phone,
+            donor_email: donor_email,
             donor_district: donor_address,
             donor_blood_type: donor_blood_type,
             donor_img: donor_img,
         });
+
 
         const bloodType = await bloodTypesModel.findOne({
             attributes: ["type_name"],
@@ -169,6 +180,7 @@ router.put("/updateDonor/:donor_id", authenticateToken, async (req, res) => {
             timestamps: false,
             freezeTableName: true,
         });
+
         const districtModel = sequelize.define("district", district, {
             timestamps: false,
             freezeTableName: true,
@@ -496,9 +508,6 @@ router.post("/requestBlood", async (req, res) => {
         });
         if (nearBlood) {
             const decreasedUnit = Math.min(nearBlood.dataValues.units, units);
-            console.log("azaltılan", decreasedUnit);
-            console.log("olan", nearBlood.dataValues.units);
-            console.log("istenen", units);
 
             if (decreasedUnit === units) {
                 // If available units are equal to requested units, decrease and send email
@@ -520,8 +529,7 @@ router.post("/requestBlood", async (req, res) => {
                     });
 
                 return res.status(200).send({message: "Blood request fully completed successfully."});
-            }
-            else {
+            } else {
                 const updatedRequest = {
                     branch_id: branch_id,
                     blood_type: blood_type,
@@ -538,7 +546,7 @@ router.post("/requestBlood", async (req, res) => {
                 // Decrease the units in blood bank
                 await bloodBankModel.decrement("units", {
                     by: decreasedUnit,
-                    where: { donate_id: nearBlood.dataValues.donate_id },
+                    where: {donate_id: nearBlood.dataValues.donate_id},
                 });
 
                 // Send email to the donor
@@ -548,7 +556,7 @@ router.post("/requestBlood", async (req, res) => {
                     text: 'Your blood request used. Thank you for your help.',
                 });
 
-                return res.status(200).send({ message: "Blood request partially completed successfully." });
+                return res.status(200).send({message: "Blood request partially completed successfully."});
             }
 
 
@@ -743,5 +751,76 @@ router.post("/processBloodRequests", async (req, res) => {
         return res.status(500).send(error.message);
     }
 });
+router.get("/getBloodTypes", async (req, res) => {
+    try {
+        const sequelize = await initializeSequelize();
+        const bloodTypesModel = sequelize.define("blood_types", blood_types, {
+            timestamps: false,
+            freezeTableName: true,
+        });
+
+        const bloodTypes = await bloodTypesModel.findAll({
+            attributes: ["type_id", "type_name"],
+        });
+
+        return res.status(200).send(bloodTypes);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send(error.message);
+    }
+});
+
+router.get("/getAllDonors", async (req, res) => {
+    try {
+        const sequelize = await initializeSequelize();
+        const bloodTypesModel = sequelize.define("blood_types", blood_types, {
+            timestamps: false,
+            freezeTableName: true,
+        });
+        const donorsModel = sequelize.define("donors", donors, {
+            timestamps: false,
+            freezeTableName: true,
+        });
+
+        donorsModel.belongsTo(bloodTypesModel, {
+            foreignKey: "donor_blood_type",
+            targetKey: "type_id",
+        });
+
+        // Check if the query parameters 'name' and 'surname' are provided
+        const {name, surname} = req.query;
+        const findDonors = await donorsModel.findAll({
+            attributes: ["donor_id", "donor_name", "donor_surname"],
+            include: [
+                {
+                    model: bloodTypesModel,
+                    attributes: ["type_name"],
+                },
+            ],
+            where: {
+                ...(name && {
+                    donor_name: {
+                        [Op.iLike]: `%${name}%`,
+                    },
+                }),
+                ...(surname && {
+                    donor_surname: {
+                        [Op.iLike]: `%${surname}%`,
+                    },
+                }),
+            },
+        });
+
+        if (!findDonors || findDonors.length === 0) {
+            return res.status(404).send("No donors found.");
+        }
+
+        return res.status(200).send(findDonors);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send(error.message);
+    }
+});
+
 
 module.exports = router;
