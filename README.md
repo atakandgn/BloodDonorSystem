@@ -1,5 +1,12 @@
 # Hospital Management System Routes
 
+## Description
+- The Hospital Management System Routes documentation outlines essential API endpoints for managing blood donor records, blood bank transactions, user authentication, and system administration. Users can create/update donor info, handle blood bank transactions, initiate/process blood requests, and manage system users.
+
+- The documentation introduces a daily CRON job in a Node.js app, running at 01:00. It conducts a blood bank search, decrements units, and sends email notifications to donors. Integration with a Redis Queue enhances efficiency in managing blood units and donor notifications.
+
+- For the clientside, the Material-Tailwind components library enhances the UI, providing a polished and streamlined development experience. In summary, this guide covers backend API routes, a daily CRON job, and a Material-Tailwind-enhanced clientside interface.
+
 ![donorSystemClient](https://github.com/atakandgn/BloodDonorSystem/assets/108396649/35b719c9-f0f9-456d-a7d4-e8fe381edc7a)
 
 ## 1. Create Donor (`/createDonor`)
