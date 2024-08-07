@@ -1,19 +1,21 @@
 const { createClient } = require('ioredis');
 
-
 let redisClient;
 
 try {
     console.log('Connecting to Redis...');
     redisClient = createClient({
-        password: 'xPHXwQpAsKZ6JfoLWzhZSAKmpwhkJ9NY',
-        host: 'redis-12475.c323.us-east-1-2.ec2.cloud.redislabs.com',
-        port: 12475,
+        username: "default",
+        password: 'ZyNwsDg5ebnYbC30TV5aeofbekM0Jsu1',
+        socket: {
+            host: 'redis-11247.c276.us-east-1-2.ec2.redns.redis-cloud.com',
+            port: 11247
+        },
         legacyMode: true
     });
 
     redisClient.on('connect', () => {
-        console.log('Connected to Redis');
+        console.log('Connected to Redis Server Successfully');
     });
 
     redisClient.on('error', (err) => {

@@ -3,12 +3,12 @@ import Navbar from "./Components/Navbar";
 import {Footer} from "./Components/Footer";
 import {Toaster} from "react-hot-toast";
 import ScrollTop from "./Components/ScrollTop";
-import {PopupProvider} from "./Helpers/PopupContext";
+// import {PopupProvider} from "./Helpers/PopupContext";
 
 function MainLayout({children}) {
     return (
 
-        <PopupProvider>
+        // <PopupProvider>
             <div className="relative">
                 <Navbar/>
                 <div className="container mx-auto min-h-[50vh] lg:px-0 px-2">{children}</div>
@@ -16,7 +16,7 @@ function MainLayout({children}) {
                 <Footer className="fixed bottom"/>
                 <Toaster containerClassName="custom-toast-container"/>
             </div>
-        </PopupProvider>
+        // </PopupProvider>
 
     )
 }
